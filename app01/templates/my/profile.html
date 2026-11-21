@@ -1,0 +1,40 @@
+{% extends 'layout.html' %}
+{% load rbac_tags %}
+{% block title %}我的档案{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>我的档案</h3><div class="sub">只读视图，如需修改请联系部门管理员</div></div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card" style="text-align:center;">
+            {% if employee.avatar %}
+                <img src="{{ employee.avatar.url }}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;">
+            {% else %}
+                <div style="width:120px;height:120px;border-radius:50%;background:#eef1f6;display:inline-flex;align-items:center;justify-content:center;">
+                    <span class="glyphicon glyphicon-user" style="font-size:48px;color:#b8c0cc;"></span>
+                </div>
+            {% endif %}
+            <h4 style="margin-top:14px;">{{ employee.name }}</h4>
+            <p class="text-muted">{{ employee.get_gender_display }} · {{ employee.age }} 岁</p>
+            <p><span class="label label-info">{{ employee.depart.title }}</span></p>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <h4 style="margin-top:0;">档案信息</h4>
+            <table class="table table-bordered">
+                <tr><th style="width:140px;">手机号</th><td>{{ employee.mobile }}</td></tr>
+                <tr><th>账户余额</th><td>￥{{ employee.account|money }}</td></tr>
+                <tr><th>入职时间</th><td>{{ employee.create_time|date:"Y-m-d H:i" }}</td></tr>
+                <tr><th>部门</th><td>{{ employee.depart.title }}</td></tr>
+                <tr><th>在职状态</th><td>{{ employee.is_active|yesno:"在职,离职" }}</td></tr>
+            </table>
+            <a href="{% url 'my_attendance' %}" class="btn btn-default">查看我的考勤</a>
+            <a href="{% url 'my_salary' %}" class="btn btn-default">查看我的薪资</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

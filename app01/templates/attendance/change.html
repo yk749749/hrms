@@ -1,0 +1,43 @@
+{% extends 'layout.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h3>{{ title }}</h3>
+        <div class="sub">保存时按上下班时间自动判定：09:00 后上班为迟到，18:00 前下班为早退，两次都缺为缺勤</div>
+    </div>
+    <div><a href="{% url 'attendance_list' %}" class="btn btn-default">返回列表</a></div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            {% if row_object %}
+                <div class="alert alert-info">
+                    当前状态：<strong>{{ row_object.get_status_display }}</strong>（保存后会按时间重新计算）
+                </div>
+            {% endif %}
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% include 'includes/form.html' %}
+                <button type="submit" class="btn btn-primary">保 存</button>
+                <a href="{% url 'attendance_list' %}" class="btn btn-default">取 消</a>
+            </form>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <h4 style="margin-top:0;">状态判定规则</h4>
+            <table class="table table-bordered">
+                <tr><th style="width:100px;">按时</th><td>09:00 前上班打卡，18:00 后下班打卡</td></tr>
+                <tr><th>迟到</th><td>上班打卡晚于 09:00</td></tr>
+                <tr><th>早退</th><td>下班打卡早于 18:00</td></tr>
+                <tr><th>缺勤</th><td>上下班两次打卡均缺失，或只打了一次</td></tr>
+                <tr><th>迟到并早退</th><td>既迟到又早退</td></tr>
+            </table>
+            <p class="text-muted small">考勤状态字段不对外开放，避免人工改状态与时间矛盾。</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

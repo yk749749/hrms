@@ -1,0 +1,46 @@
+{% extends 'layout.html' %}
+{% load rbac_tags %}
+{% block title %}我的薪资{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>我的薪资</h3><div class="sub">实发 = 基本工资 + 奖金 - 扣款</div></div>
+</div>
+
+<div class="card">
+    <table class="table table-bordered table-hover">
+        <thead>
+        <tr>
+            <th style="width:120px;">月份</th>
+            <th>基本工资</th>
+            <th>奖金</th>
+            <th>扣款</th>
+            <th>实发工资</th>
+            <th>备注</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for obj in queryset %}
+            <tr>
+                <td>{{ obj.month }}</td>
+                <td>{{ obj.base_salary|money }}</td>
+                <td>{{ obj.bonus|money }}</td>
+                <td>{{ obj.deduction|money }}</td>
+                <td><strong style="color:#1f5edb;">{{ obj.total|money }}</strong></td>
+                <td>{{ obj.remark|default:"—" }}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6" class="text-center text-muted" style="padding:30px;">暂无薪资记录</td></tr>
+        {% endfor %}
+        </tbody>
+        {% if queryset %}
+            <tfoot>
+            <tr>
+                <th colspan="4" style="text-align:right;">累计实发</th>
+                <th colspan="2">￥{{ total|money }}</th>
+            </tr>
+            </tfoot>
+        {% endif %}
+    </table>
+</div>
+{% endblock %}

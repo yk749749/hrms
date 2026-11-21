@@ -1,0 +1,57 @@
+{% extends 'layout.html' %}
+{% block title %}角色与权限{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>角色与权限</h3><div class="sub">RBAC：用户 - 角色 - 权限 三层结构</div></div>
+    <div>
+        {% if 'system:manage' in perms_codes %}
+            <a href="{% url 'role_add' %}" class="btn btn-primary"><span class="glyphicon glyphicon-plus"></span> 新建角色</a>
+        {% endif %}
+        <a href="{% url 'user_list' %}" class="btn btn-default">用户管理</a>
+    </div>
+</div>
+
+<div class="card">
+    <table class="table table-bordered table-hover">
+        <thead>
+        <tr>
+            <th style="width:60px;">ID</th>
+            <th style="width:140px;">角色名称</th>
+            <th style="width:120px;">角色编码</th>
+            <th style="width:90px;">权限数</th>
+            <th>权限明细</th>
+            <th style="width:200px;">操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for obj in queryset %}
+            <tr>
+                <td>{{ obj.id }}</td>
+                <td>{{ obj.name }}</td>
+                <td><code>{{ obj.code }}</code></td>
+                <td>{{ obj.permissions.count }}</td>
+                <td>
+                    {% for perm in obj.permissions.all %}
+                        <span class="label label-default">{{ perm.code }}</span>
+                    {% empty %}<span class="text-muted">未分配权限</span>{% endfor %}
+                </td>
+                <td>
+                    {% if 'system:manage' in perms_codes %}
+                        <a href="{% url 'role_edit' obj.id %}" class="btn btn-primary btn-xs">编辑</a>
+                        <form method="post" action="{% url 'role_delete' %}" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="nid" value="{{ obj.id }}">
+                            <button type="submit" class="btn btn-danger btn-xs" data-confirm="确定删除角色「{{ obj.name }}」吗？">删除</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6" class="text-center text-muted" style="padding:30px;">暂无角色</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <nav style="text-align:center;"><ul class="pagination">{{ page_string }}</ul></nav>
+</div>
+{% endblock %}

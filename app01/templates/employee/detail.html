@@ -1,0 +1,88 @@
+{% extends 'layout.html' %}
+{% load rbac_tags %}
+{% block title %}员工详情 - {{ employee.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>员工详情 · {{ employee.name }}</h3><div class="sub">{{ employee.depart.title }} · 入职 {{ employee.create_time|date:"Y-m-d" }}</div></div>
+    <div>
+        {% if 'employee:edit' in perms_codes %}
+            <a href="{% url 'employee_edit' employee.id %}" class="btn btn-primary">编辑</a>
+        {% endif %}
+        <a href="{% url 'employee_list' %}" class="btn btn-default">返回列表</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card" style="text-align:center;">
+            {% if employee.avatar %}
+                <img src="{{ employee.avatar.url }}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;">
+            {% else %}
+                <div style="width:120px;height:120px;border-radius:50%;background:#eef1f6;display:inline-flex;align-items:center;justify-content:center;">
+                    <span class="glyphicon glyphicon-user" style="font-size:48px;color:#b8c0cc;"></span>
+                </div>
+            {% endif %}
+            <h4 style="margin-top:14px;">{{ employee.name }}</h4>
+            <p class="text-muted">{{ employee.get_gender_display }} · {{ employee.age }} 岁</p>
+            <p><span class="label label-info">{{ employee.depart.title }}</span></p>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <h4 style="margin-top:0;">档案信息</h4>
+            <table class="table table-bordered">
+                <tr><th style="width:130px;">手机号</th><td>{{ employee.mobile }}</td></tr>
+                <tr><th>账户余额</th><td>￥{{ employee.account|money }}</td></tr>
+                <tr><th>入职时间</th><td>{{ employee.create_time|date:"Y-m-d H:i" }}</td></tr>
+                <tr><th>在职状态</th><td>{{ employee.is_active|yesno:"在职,离职" }}</td></tr>
+                <tr><th>最近更新</th><td>{{ employee.update_time|date:"Y-m-d H:i" }}</td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <h4 style="margin-top:0;">最近考勤</h4>
+            <table class="table table-condensed">
+                <thead><tr><th>日期</th><th>上班</th><th>下班</th><th>状态</th></tr></thead>
+                <tbody>
+                {% for a in attendances %}
+                    <tr>
+                        <td>{{ a.date|date:"Y-m-d" }}</td>
+                        <td>{{ a.check_in|time:"H:i"|default:"—" }}</td>
+                        <td>{{ a.check_out|time:"H:i"|default:"—" }}</td>
+                        <td><span class="label label-{{ a.status|status_class }}">{{ a.get_status_display }}</span></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="text-muted text-center">暂无记录</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <h4 style="margin-top:0;">最近薪资</h4>
+            <table class="table table-condensed">
+                <thead><tr><th>月份</th><th>基本</th><th>奖金</th><th>扣款</th><th>实发</th></tr></thead>
+                <tbody>
+                {% for s in salaries %}
+                    <tr>
+                        <td>{{ s.month }}</td>
+                        <td>{{ s.base_salary|money }}</td>
+                        <td>{{ s.bonus|money }}</td>
+                        <td>{{ s.deduction|money }}</td>
+                        <td><strong>{{ s.total|money }}</strong></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="text-muted text-center">暂无记录</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

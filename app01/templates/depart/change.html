@@ -1,0 +1,22 @@
+{% extends 'layout.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>{{ title }}</h3><div class="sub">部门名称唯一，员工所在部门删除时会被阻止</div></div>
+    <div><a href="{% url 'depart_list' %}" class="btn btn-default">返回列表</a></div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% include 'includes/form.html' %}
+                <button type="submit" class="btn btn-primary">保 存</button>
+                <a href="{% url 'depart_list' %}" class="btn btn-default">取 消</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

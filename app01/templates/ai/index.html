@@ -1,0 +1,661 @@
+{% extends 'layout.html' %}
+{% block title %}AI 智能助手{% endblock %}
+
+{% block css %}
+<style>
+    .ai-result {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #f7f9fc;
+        border: 1px solid #e6e9ef;
+        border-radius: 6px;
+        padding: 14px 16px;
+        min-height: 180px;
+        margin: 0;
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1.8;
+        color: #1f2a44;
+    }
+    .ai-meta {
+        color: #9aa4b2;
+        font-size: 12px;
+        margin-top: 10px;
+    }
+    .source-list {
+        margin-top: 12px;
+        display: none;
+    }
+    .source-list .label {
+        font-weight: normal;
+        margin: 0 6px 6px 0;
+        display: inline-block;
+    }
+    .chat-log {
+        height: 360px;
+        overflow-y: auto;
+        background: #f7f9fc;
+        border: 1px solid #e6e9ef;
+        border-radius: 6px;
+        padding: 14px;
+    }
+    .chat-row {
+        display: flex;
+        margin-bottom: 12px;
+    }
+    .chat-row.user {
+        justify-content: flex-end;
+    }
+    .chat-bubble {
+        max-width: 78%;
+        padding: 9px 12px;
+        border-radius: 10px;
+        font-size: 13px;
+        line-height: 1.8;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .chat-row.user .chat-bubble {
+        background: #1f5edb;
+        color: #fff;
+        border-bottom-right-radius: 2px;
+    }
+    .chat-row.assistant .chat-bubble {
+        background: #fff;
+        border: 1px solid #e6e9ef;
+        color: #1f2a44;
+        border-bottom-left-radius: 2px;
+    }
+    .chat-empty {
+        color: #9aa4b2;
+        text-align: center;
+        padding-top: 140px;
+        font-size: 13px;
+    }
+    .ai-alert {
+        display: none;
+        margin-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h3>AI 智能助手</h3>
+        <div class="sub">
+            招聘 JD 生成 · 制度知识库问答 · 数据智能点评 · 多轮对话 —— 四个功能共用同一套 LLMClient
+        </div>
+    </div>
+    <div>
+        {% if configured %}
+            <span class="label label-success">已连接：{{ model_name }}</span>
+        {% else %}
+            <span class="label label-danger">未配置 API Key</span>
+        {% endif %}
+    </div>
+</div>
+
+{% if not configured %}
+<div class="alert alert-warning">
+    <strong>尚未检测到大模型配置。</strong>
+    请在 PowerShell 里执行 <code>. .\scripts\ai_env.ps1</code>（方式 A，仅当前窗口有效），
+    把 <code>AI_API_KEY</code> 填好后再启动服务。当前配置：
+    <code>AI_BASE_URL={{ base_url }}</code>、<code>AI_MODEL={{ model_name }}</code>。
+</div>
+{% endif %}
+
+<ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#pane-jd" data-toggle="tab">① 招聘 JD</a></li>
+    <li role="presentation"><a href="#pane-qa" data-toggle="tab">② 制度问答</a></li>
+    <li role="presentation"><a href="#pane-cmp" data-toggle="tab">③ 数据点评</a></li>
+    <li role="presentation"><a href="#pane-chat" data-toggle="tab">④ 多轮对话</a></li>
+</ul>
+
+<div class="tab-content" style="margin-top:18px;">
+
+    {# ---------------- ① 招聘 JD ---------------- #}
+    <div role="tabpanel" class="tab-pane active" id="pane-jd">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <h4 style="margin-top:0;">生成招聘 JD</h4>
+                    <p class="text-muted small">
+                        输入岗位名称，模型按“岗位职责 / 任职要求 / 薪资范围”三段式输出。
+                    </p>
+                    <div class="form-group">
+                        <label for="jdTitle">岗位名称</label>
+                        <input type="text" id="jdTitle" class="form-control" maxlength="40"
+                               placeholder="例如：Java 后端工程师">
+                    </div>
+                    <div class="form-group">
+                        <label for="jdDept">所属部门（可选）</label>
+                        <input type="text" id="jdDept" class="form-control" maxlength="32"
+                               placeholder="例如：技术部">
+                    </div>
+                    <div id="jdAlert" class="alert alert-danger ai-alert"></div>
+                    <button type="button" class="btn btn-primary" id="btnJd">
+                        <span class="glyphicon glyphicon-flash"></span> 生成 JD
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card">
+                    <h4 style="margin-top:0;">生成结果</h4>
+                    <pre id="jdResult" class="ai-result">这里显示模型生成的招聘 JD。</pre>
+                    <div class="ai-meta">
+                        提示词模板见 <code>app01/utils/prompts.py</code>：
+                        角色（资深 HR）+ 要求（贴合岗位、薪资只给区间）+ 输出格式（固定三段）。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ---------------- ② 制度问答 ---------------- #}
+    <div role="tabpanel" class="tab-pane" id="pane-qa">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <h4 style="margin-top:0;">制度知识库问答</h4>
+                    <p class="text-muted small">
+                        先用 SQL 关键词检索知识库，把命中的制度拼进提示词，模型只依据资料回答；
+                        资料没有的内容会回答“不知道”。
+                    </p>
+                    <div class="form-group">
+                        <label for="qaQuestion">你的问题</label>
+                        <textarea id="qaQuestion" class="form-control" rows="4" maxlength="{{ max_input }}"
+                                  placeholder="例如：迟到怎么扣钱？"></textarea>
+                        <span class="help-block small text-muted">
+                            <span id="qaCount">0</span> / {{ max_input }} 字
+                        </span>
+                    </div>
+                    <div id="qaAlert" class="alert alert-danger ai-alert"></div>
+                    <button type="button" class="btn btn-primary" id="btnQa">
+                        <span class="glyphicon glyphicon-search"></span> 提问
+                    </button>
+                    <a href="#kbList" class="btn btn-link" data-toggle="collapse">
+                        当前知识库 {{ knowledge_count }} 条
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card">
+                    <h4 style="margin-top:0;">回答</h4>
+                    <pre id="qaResult" class="ai-result">这里显示回答；下方标签是本次检索到的制度资料。</pre>
+                    <div id="qaSources" class="source-list"></div>
+                    <div id="qaHint" class="ai-meta" style="display:none;"></div>
+
+                    <div class="collapse" id="kbList">
+                        <hr>
+                        <div class="ai-meta" style="margin-top:0;">知识库条目（由 <code>manage.py ai_init</code> 预置）</div>
+                        <table class="table table-condensed table-bordered" style="margin-bottom:0;">
+                            <thead>
+                            <tr><th style="width:90px;">分类</th><th>标题</th></tr>
+                            </thead>
+                            <tbody>
+                            {% for item in knowledges %}
+                                <tr>
+                                    <td>{{ item.category|default:"未分类" }}</td>
+                                    <td>{{ item.title }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="2" class="text-muted">知识库为空，请先执行 manage.py ai_init</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ---------------- ③ 数据点评 ---------------- #}
+    <div role="tabpanel" class="tab-pane" id="pane-cmp">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <h4 style="margin-top:0;">考勤 / 薪资智能点评</h4>
+                    <p class="text-muted small">
+                        选定员工与月份，后端把该月考勤与薪资数据转成文本注入提示词，
+                        由模型给出一句点评和一条改进建议。
+                    </p>
+                    <div class="form-group">
+                        <label for="cmpEmployee">员工</label>
+                        <select id="cmpEmployee" class="form-control">
+                            {% for emp in employees %}
+                                <option value="{{ emp.id }}">{{ emp.name }}（{{ emp.depart.title }}）</option>
+                            {% empty %}
+                                <option value="">当前账号没有可查看的员工</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cmpMonth">月份</label>
+                        <select id="cmpMonth" class="form-control">
+                            {% for m in months %}
+                                <option value="{{ m }}" {% if m == default_month %}selected{% endif %}>{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="cmpAlert" class="alert alert-danger ai-alert"></div>
+                    <button type="button" class="btn btn-primary" id="btnCmp">
+                        <span class="glyphicon glyphicon-comment"></span> 生成点评
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card">
+                    <h4 style="margin-top:0;">点评结果</h4>
+                    <pre id="cmpResult" class="ai-result">这里显示“点评 + 建议”。</pre>
+                    <div class="ai-meta" style="margin-bottom:6px;">注入提示词的数据：</div>
+                    <pre id="cmpData" class="ai-result" style="min-height:80px;">（选择员工与月份后点击生成）</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ---------------- ④ 多轮对话 ---------------- #}
+    <div role="tabpanel" class="tab-pane" id="pane-chat">
+        <div class="row">
+            <div class="col-md-7">
+                <div class="card">
+                    <h4 style="margin-top:0;">
+                        多轮对话助手
+                        <small class="text-muted" style="font-size:12px;">保留最近 {{ history_turns }} 轮上下文</small>
+                    </h4>
+                    <div class="chat-log" id="chatLog">
+                        <div class="chat-empty">开始对话吧，例如：“迟到怎么算？”再追问：“那请假呢？”</div>
+                    </div>
+                    <div class="form-group" style="margin-top:12px;">
+                        <textarea id="chatInput" class="form-control" rows="3" maxlength="{{ max_input }}"
+                                  placeholder="输入问题，Enter 发送，Shift+Enter 换行"></textarea>
+                        <span class="help-block small text-muted">
+                            <span id="chatCount">0</span> / {{ max_input }} 字
+                        </span>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="btnChat">
+                        <span class="glyphicon glyphicon-send"></span> 发送
+                    </button>
+                    <button type="button" class="btn btn-default" id="btnClear">清空对话</button>
+                    <label class="checkbox-inline" style="margin-left:10px;">
+                        <input type="checkbox" id="streamToggle" checked> 流式输出（SSE）
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="card">
+                    <h4 style="margin-top:0;">这一块在演示什么</h4>
+                    <ul class="text-muted small" style="padding-left:18px; line-height:2;">
+                        <li><strong>多轮上下文（T5）</strong>：前端把历史一问一答随请求回传，
+                            服务端只保留最近 {{ history_turns }} 轮并做清洗，模型因此能接住“那如果缺勤呢？”。</li>
+                        <li><strong>流式输出（T7）</strong>：勾选后走 SSE 接口，逐词渲染，
+                            不用等整段生成完。</li>
+                        <li><strong>健壮性（T6）</strong>：输入超长会截断；调用超时、限流、
+                            鉴权失败都会返回一句友好提示，页面不会崩。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+    (function () {
+        "use strict";
+
+        var MAX_INPUT = {{ max_input }};
+
+        function csrfToken() {
+            return window.getCsrfToken ? window.getCsrfToken() : "";
+        }
+
+        function post(url, data) {
+            return $.ajax({
+                url: url,
+                type: "post",
+                data: data,
+                dataType: "json",
+                headers: {"X-CSRFToken": csrfToken()}
+            });
+        }
+
+        function showAlert(box, message) {
+            box.textContent = message;
+            box.style.display = "block";
+        }
+
+        function hideAlert(box) {
+            box.style.display = "none";
+            box.textContent = "";
+        }
+
+        function errorText(xhr) {
+            var res = xhr.responseJSON || {};
+            return res.error || ("请求失败（HTTP " + xhr.status + "）");
+        }
+
+        function bindCounter(input, counter) {
+            if (!input || !counter) { return; }
+            input.addEventListener("input", function () {
+                counter.textContent = input.value.length;
+            });
+        }
+
+        // ---------- ① 招聘 JD ----------
+        (function () {
+            var btn = document.getElementById("btnJd");
+            var out = document.getElementById("jdResult");
+            var alertBox = document.getElementById("jdAlert");
+
+            btn.addEventListener("click", function () {
+                var title = document.getElementById("jdTitle").value.trim();
+                var department = document.getElementById("jdDept").value.trim();
+                hideAlert(alertBox);
+                if (!title) {
+                    showAlert(alertBox, "岗位名称不能为空");
+                    return;
+                }
+                out.textContent = "生成中，请稍候…";
+                btn.disabled = true;
+                post("{% url 'ai_jd' %}", {title: title, department: department})
+                    .done(function (res) {
+                        if (res && res.status) {
+                            out.textContent = res.data;
+                        } else {
+                            out.textContent = "";
+                            showAlert(alertBox, (res && res.error) || "生成失败");
+                        }
+                    })
+                    .fail(function (xhr) {
+                        out.textContent = "";
+                        showAlert(alertBox, errorText(xhr));
+                    })
+                    .always(function () {
+                        btn.disabled = false;
+                    });
+            });
+        })();
+
+        // ---------- ② 制度问答 ----------
+        (function () {
+            var input = document.getElementById("qaQuestion");
+            var btn = document.getElementById("btnQa");
+            var out = document.getElementById("qaResult");
+            var alertBox = document.getElementById("qaAlert");
+            var sourceBox = document.getElementById("qaSources");
+            var hintBox = document.getElementById("qaHint");
+
+            bindCounter(input, document.getElementById("qaCount"));
+
+            function renderSources(sources) {
+                sourceBox.innerHTML = "";
+                hintBox.style.display = "none";
+                hintBox.textContent = "";
+                if (!sources || !sources.length) {
+                    sourceBox.style.display = "none";
+                    return;
+                }
+                sources.forEach(function (item) {
+                    var label = document.createElement("span");
+                    label.className = "label label-info";
+                    label.textContent = (item.category ? "[" + item.category + "] " : "") + item.title;
+                    sourceBox.appendChild(label);
+                });
+                sourceBox.style.display = "block";
+            }
+
+            btn.addEventListener("click", function () {
+                var question = input.value.trim();
+                hideAlert(alertBox);
+                if (!question) {
+                    showAlert(alertBox, "问题不能为空");
+                    return;
+                }
+                out.textContent = "检索资料并生成回答…";
+                sourceBox.style.display = "none";
+                hintBox.style.display = "none";
+                btn.disabled = true;
+                post("{% url 'ai_qa' %}", {question: question})
+                    .done(function (res) {
+                        if (res && res.status) {
+                            out.textContent = res.data;
+                            renderSources(res.sources);
+                            if (res.hint) {
+                                hintBox.textContent = res.hint;
+                                hintBox.style.display = "block";
+                            }
+                        } else {
+                            out.textContent = "";
+                            showAlert(alertBox, (res && res.error) || "回答失败");
+                        }
+                    })
+                    .fail(function (xhr) {
+                        out.textContent = "";
+                        showAlert(alertBox, errorText(xhr));
+                    })
+                    .always(function () {
+                        btn.disabled = false;
+                    });
+            });
+        })();
+
+        // ---------- ③ 数据点评 ----------
+        (function () {
+            var btn = document.getElementById("btnCmp");
+            var out = document.getElementById("cmpResult");
+            var dataBox = document.getElementById("cmpData");
+            var alertBox = document.getElementById("cmpAlert");
+            var employee = document.getElementById("cmpEmployee");
+            var month = document.getElementById("cmpMonth");
+
+            btn.addEventListener("click", function () {
+                hideAlert(alertBox);
+                if (!employee.value) {
+                    showAlert(alertBox, "当前账号没有可查看的员工");
+                    return;
+                }
+                out.textContent = "分析数据并生成点评…";
+                btn.disabled = true;
+                post("{% url 'ai_comment' %}", {employee: employee.value, month: month.value})
+                    .done(function (res) {
+                        if (res && res.status) {
+                            out.textContent = res.data;
+                            dataBox.textContent = res.data_text || "";
+                        } else {
+                            out.textContent = "";
+                            showAlert(alertBox, (res && res.error) || "生成失败");
+                        }
+                    })
+                    .fail(function (xhr) {
+                        out.textContent = "";
+                        showAlert(alertBox, errorText(xhr));
+                    })
+                    .always(function () {
+                        btn.disabled = false;
+                    });
+            });
+        })();
+
+        // ---------- ④ 多轮对话 ----------
+        (function () {
+            var log = document.getElementById("chatLog");
+            var input = document.getElementById("chatInput");
+            var sendBtn = document.getElementById("btnChat");
+            var clearBtn = document.getElementById("btnClear");
+            var streamToggle = document.getElementById("streamToggle");
+            var history = [];
+            var sending = false;
+
+            bindCounter(input, document.getElementById("chatCount"));
+
+            function scrollBottom() {
+                log.scrollTop = log.scrollHeight;
+            }
+
+            function addBubble(role, text) {
+                var tip = log.querySelector(".chat-empty");
+                if (tip) { tip.parentNode.removeChild(tip); }
+                var row = document.createElement("div");
+                row.className = "chat-row " + role;
+                var bubble = document.createElement("div");
+                bubble.className = "chat-bubble";
+                bubble.textContent = text;
+                row.appendChild(bubble);
+                log.appendChild(row);
+                scrollBottom();
+                return bubble;
+            }
+
+            function remember(question, answer) {
+                history.push({role: "user", content: question});
+                history.push({role: "assistant", content: answer});
+                history = history.slice(-8);
+            }
+
+            function plainAnswer(question) {
+                sending = true;
+                sendBtn.disabled = true;
+                var bubble = addBubble("assistant", "思考中…");
+                post("{% url 'ai_chat' %}", {
+                    question: question,
+                    history: JSON.stringify(history.slice(-8))
+                }).done(function (res) {
+                    if (res && res.status) {
+                        bubble.textContent = res.data;
+                        remember(question, res.data);
+                    } else {
+                        bubble.textContent = (res && res.error) || "回答失败";
+                        bubble.style.color = "#c0392b";
+                    }
+                }).fail(function (xhr) {
+                    bubble.textContent = errorText(xhr);
+                    bubble.style.color = "#c0392b";
+                }).always(function () {
+                    sending = false;
+                    sendBtn.disabled = false;
+                    scrollBottom();
+                });
+            }
+
+            function streamAnswer(question) {
+                if (!window.fetch || !window.TextDecoder) {
+                    plainAnswer(question);
+                    return;
+                }
+                sending = true;
+                sendBtn.disabled = true;
+
+                var bubble = addBubble("assistant", "…");
+                var answer = "";
+                var failed = false;
+                var body = new URLSearchParams();
+                body.append("question", question);
+                body.append("history", JSON.stringify(history.slice(-8)));
+
+                fetch("{% url 'ai_chat_stream' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "X-CSRFToken": csrfToken()
+                    },
+                    body: body.toString(),
+                    credentials: "same-origin"
+                }).then(function (resp) {
+                    if (!resp.ok || !resp.body) {
+                        throw new Error("HTTP " + resp.status);
+                    }
+                    var reader = resp.body.getReader();
+                    var decoder = new TextDecoder("utf-8");
+                    var buffer = "";
+
+                    function handle(packet) {
+                        packet.split("\n").forEach(function (line) {
+                            if (line.indexOf("data:") !== 0) { return; }
+                            var payload;
+                            try {
+                                payload = JSON.parse(line.slice(5).trim());
+                            } catch (err) {
+                                return;
+                            }
+                            if (payload.delta) {
+                                answer += payload.delta;
+                                bubble.textContent = answer;
+                                scrollBottom();
+                            }
+                            if (payload.error) {
+                                failed = true;
+                                bubble.textContent = (answer ? answer + "\n\n" : "") + payload.error;
+                                bubble.style.color = "#c0392b";
+                            }
+                        });
+                    }
+
+                    function pump() {
+                        return reader.read().then(function (result) {
+                            if (result.done) { return; }
+                            buffer += decoder.decode(result.value, {stream: true});
+                            var packets = buffer.split("\n\n");
+                            buffer = packets.pop();
+                            packets.forEach(handle);
+                            return pump();
+                        });
+                    }
+
+                    return pump();
+                }).then(function () {
+                    if (failed) { return; }
+                    if (!answer) {
+                        bubble.textContent = "模型没有返回内容，请稍后再试。";
+                        bubble.style.color = "#c0392b";
+                        return;
+                    }
+                    remember(question, answer);
+                }).catch(function (err) {
+                    bubble.textContent = "流式请求失败（" + err.message + "），请稍后再试。";
+                    bubble.style.color = "#c0392b";
+                }).finally(function () {
+                    sending = false;
+                    sendBtn.disabled = false;
+                    scrollBottom();
+                });
+            }
+
+            function send() {
+                if (sending) { return; }
+                var question = input.value.trim();
+                if (!question) { return; }
+                if (question.length > MAX_INPUT) {
+                    question = question.slice(0, MAX_INPUT);
+                }
+                addBubble("user", question);
+                input.value = "";
+                document.getElementById("chatCount").textContent = "0";
+                if (streamToggle.checked) {
+                    streamAnswer(question);
+                } else {
+                    plainAnswer(question);
+                }
+            }
+
+            sendBtn.addEventListener("click", send);
+
+            input.addEventListener("keydown", function (event) {
+                if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    send();
+                }
+            });
+
+            clearBtn.addEventListener("click", function () {
+                if (sending) { return; }
+                history = [];
+                log.innerHTML = '<div class="chat-empty">对话已清空，试试问：“迟到怎么算？”</div>';
+            });
+        })();
+    })();
+</script>
+{% endblock %}

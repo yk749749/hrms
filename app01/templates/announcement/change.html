@@ -1,0 +1,22 @@
+{% extends 'layout.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>{{ title }}</h3><div class="sub">发布人自动取当前登录用户，发布时间自动写入</div></div>
+    <div><a href="{% url 'announcement_list' %}" class="btn btn-default">返回列表</a></div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% include 'includes/form.html' %}
+                <button type="submit" class="btn btn-primary">保 存</button>
+                <a href="{% url 'announcement_list' %}" class="btn btn-default">取 消</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

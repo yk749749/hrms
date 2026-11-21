@@ -1,0 +1,114 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% load rbac_tags %}
+{% block title %}首页 - 企业员工管理系统{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h3>工作台</h3>
+        <div class="sub">{{ today|date:"Y年m月d日" }} · 欢迎回来，{{ current_user.real_name|default:current_user.username }}</div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="icon" style="background:#1f5edb;"><span class="glyphicon glyphicon-user"></span></div>
+            <div>
+                <div class="value">{{ cards.employee_total }}</div>
+                <div class="label">员工总数</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="icon" style="background:#0fa97b;"><span class="glyphicon glyphicon-list-alt"></span></div>
+            <div>
+                <div class="value">{{ cards.department_total }}</div>
+                <div class="label">部门总数</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="icon" style="background:#f0a020;"><span class="glyphicon glyphicon-time"></span></div>
+            <div>
+                <div class="value">{{ cards.attendance_today }}</div>
+                <div class="label">今日考勤记录</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="icon" style="background:#e5484d;"><span class="glyphicon glyphicon-yen"></span></div>
+            <div>
+                <div class="value">{{ cards.month_salary_total|money }}</div>
+                <div class="label">{{ this_month }} 薪资总额（元）</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card">
+            <h4 style="margin-top:0;">今日考勤状态分布</h4>
+            <div id="todayChart" class="chart" style="height:320px;"></div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card">
+            <h4 style="margin-top:0;">
+                最新公告
+                {% if 'announcement:view' in perms_codes %}
+                    <a href="{% url 'announcement_list' %}" class="pull-right small">查看全部</a>
+                {% endif %}
+            </h4>
+            {% if announcements %}
+                <ul class="list-group" style="margin-bottom:0;">
+                    {% for item in announcements %}
+                        <li class="list-group-item">
+                            {% if item.is_top %}<span class="label badge-top">置顶</span>{% endif %}
+                            <a href="{% if 'announcement:view' in perms_codes %}{% url 'announcement_detail' item.id %}{% else %}javascript:void(0);{% endif %}">
+                                {{ item.title }}
+                            </a>
+                            <div class="text-muted small">{{ item.create_time|date:"Y-m-d H:i" }} · {{ item.publisher.real_name|default:item.publisher.username|default:"系统" }}</div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">暂无公告</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script src="{% static 'js/echarts.min.js' %}"></script>
+<script>
+    (function () {
+        if (!window.echarts) { return; }
+        var chart = echarts.init(document.getElementById('todayChart'));
+        // 用后端返回的 status 值映射中文名
+        var raw = [
+            {% for item in status_counts %}{"status": {{ item.status }}, "value": {{ item.c }}}{% if not forloop.last %},{% endif %}{% endfor %}
+        ];
+        var nameMap = {1: '按时', 2: '迟到', 3: '早退', 4: '缺勤', 5: '迟到并早退'};
+        var seriesData = raw.map(function (r) { return {value: r.value, name: nameMap[r.status] || ('状态' + r.status)}; });
+        chart.setOption({
+            tooltip: {trigger: 'item', formatter: '{b}: {c} 人 ({d}%)'},
+            legend: {bottom: 0},
+            series: [{
+                type: 'pie',
+                radius: ['42%', '68%'],
+                center: ['50%', '46%'],
+                data: seriesData,
+                label: {formatter: '{b}\n{c}'}
+            }]
+        });
+        window.addEventListener('resize', function () { chart.resize(); });
+    })();
+</script>
+{% endblock %}

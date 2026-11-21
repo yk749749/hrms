@@ -1,0 +1,33 @@
+{% extends 'layout.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>{{ title }}</h3><div class="sub">角色决定权限，部门决定数据范围，关联员工后可查看“我的考勤/薪资”</div></div>
+    <div><a href="{% url 'user_list' %}" class="btn btn-default">返回列表</a></div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% include 'includes/form.html' %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
+                {% endif %}
+                <button type="submit" class="btn btn-primary">保 存</button>
+                <a href="{% url 'user_list' %}" class="btn btn-default">取 消</a>
+            </form>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <h4 style="margin-top:0;">角色说明</h4>
+            <p><span class="label label-danger">超级管理员</span> 全部权限，可管理用户与角色。</p>
+            <p><span class="label label-warning">部门管理员</span> 管理本部门员工、考勤与薪资录入。</p>
+            <p><span class="label label-info">普通员工</span> 只能查看自己的档案、考勤与薪资。</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

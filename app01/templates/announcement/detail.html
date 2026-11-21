@@ -1,0 +1,20 @@
+{% extends 'layout.html' %}
+{% block title %}{{ row_object.title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h3>{{ row_object.title }}</h3>
+        <div class="sub">
+            发布人：{{ row_object.publisher.real_name|default:row_object.publisher.username|default:"系统" }}
+            · {{ row_object.create_time|date:"Y-m-d H:i" }}
+            {% if row_object.is_top %}<span class="label badge-top">置顶</span>{% endif %}
+        </div>
+    </div>
+    <div><a href="{% url 'announcement_list' %}" class="btn btn-default">返回列表</a></div>
+</div>
+
+<div class="card">
+    <div style="line-height:1.9;color:#3b4657;">{{ row_object.content|linebreaks }}</div>
+</div>
+{% endblock %}

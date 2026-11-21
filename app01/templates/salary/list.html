@@ -1,0 +1,102 @@
+{% extends 'layout.html' %}
+{% load rbac_tags %}
+{% block title %}薪资管理{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h3>薪资管理</h3>
+        <div class="sub">{{ month }} 薪资统计 · 实发 = 基本工资 + 奖金 - 扣款</div>
+    </div>
+    <div>
+        {% if 'salary:add' in perms_codes %}
+            <a href="{% url 'salary_add' %}" class="btn btn-primary">
+                <span class="glyphicon glyphicon-plus"></span> 录入薪资
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card"><div><div class="value">￥{{ summary.sum_total|money }}</div><div class="label">选定月份薪资总额</div></div></div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card"><div><div class="value">￥{{ summary.avg_total|money }}</div><div class="label">人均实发</div></div></div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card"><div><div class="value">￥{{ summary.max_total|money }}</div><div class="label">最高实发</div></div></div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card"><div><div class="value">{{ summary.count }}</div><div class="label">薪资记录数</div></div></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="search-bar">
+        <form class="form-inline" method="get">
+            <div class="form-group">
+                <select name="month" class="form-control" style="width:150px;">
+                    {% for m in available_months %}
+                        <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <input type="text" name="q" value="{{ keyword }}" class="form-control"
+                       placeholder="员工姓名" style="width:160px;">
+            </div>
+            <button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search"></span> 查询</button>
+            <a href="{% url 'salary_list' %}" class="btn btn-link">重置</a>
+        </form>
+    </div>
+
+    <table class="table table-bordered table-hover">
+        <thead>
+        <tr>
+            <th style="width:60px;">ID</th>
+            <th>员工</th>
+            <th style="width:120px;">部门</th>
+            <th style="width:100px;">月份</th>
+            <th style="width:110px;">基本工资</th>
+            <th style="width:100px;">奖金</th>
+            <th style="width:100px;">扣款</th>
+            <th style="width:110px;">实发工资</th>
+            <th>备注</th>
+            <th style="width:140px;">操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for obj in queryset %}
+            <tr>
+                <td>{{ obj.id }}</td>
+                <td>{{ obj.employee.name }}</td>
+                <td>{{ obj.employee.depart.title }}</td>
+                <td>{{ obj.month }}</td>
+                <td>{{ obj.base_salary|money }}</td>
+                <td>{{ obj.bonus|money }}</td>
+                <td>{{ obj.deduction|money }}</td>
+                <td><strong style="color:#1f5edb;">{{ obj.total|money }}</strong></td>
+                <td>{{ obj.remark|default:"—" }}</td>
+                <td>
+                    {% if 'salary:edit' in perms_codes %}
+                        <a href="{% url 'salary_edit' obj.id %}" class="btn btn-primary btn-xs">编辑</a>
+                    {% endif %}
+                    {% if 'salary:delete' in perms_codes %}
+                        <form method="post" action="{% url 'salary_delete' %}" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="nid" value="{{ obj.id }}">
+                            <button type="submit" class="btn btn-danger btn-xs" data-confirm="确定删除这条薪资记录吗？">删除</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="10" class="text-center text-muted" style="padding:30px;">该月份暂无薪资记录</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <nav style="text-align:center;"><ul class="pagination">{{ page_string }}</ul></nav>
+</div>
+{% endblock %}

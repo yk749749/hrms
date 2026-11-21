@@ -1,0 +1,118 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% block title %}数据统计{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>数据统计</h3><div class="sub">部门人数分布 · 各月薪资趋势 · 近 7 天考勤（AJAX 取数，ECharts 渲染）</div></div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <h4 style="margin-top:0;">部门人数分布</h4>
+            <div id="departChart" class="chart"></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <h4 style="margin-top:0;">近 7 天考勤状态</h4>
+            <div id="attendanceChart" class="chart"></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h4 style="margin-top:0;">各月薪资趋势（总额 / 人均）</h4>
+    <div id="salaryChart" class="chart" style="height:400px;"></div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script src="{% static 'js/echarts.min.js' %}"></script>
+<script>
+    (function () {
+        if (!window.echarts) {
+            console.error('ECharts 未加载');
+            return;
+        }
+
+        var departChart = echarts.init(document.getElementById('departChart'));
+        var attendanceChart = echarts.init(document.getElementById('attendanceChart'));
+        var salaryChart = echarts.init(document.getElementById('salaryChart'));
+
+        // 1. 部门人数分布
+        $.getJSON("{% url 'stats_depart_chart' %}", function (res) {
+            if (!res.status) { return; }
+            departChart.setOption({
+                tooltip: {trigger: 'item', formatter: '{b}: {c} 人 ({d}%)'},
+                legend: {type: 'scroll', bottom: 0},
+                color: ['#1f5edb', '#0fa97b', '#f0a020', '#e5484d', '#7d5bef', '#12b5cb', '#8d6e63'],
+                series: [{
+                    type: 'pie',
+                    radius: ['38%', '66%'],
+                    center: ['50%', '45%'],
+                    data: res.data,
+                    label: {formatter: '{b}\n{c} 人'}
+                }]
+            });
+        });
+
+        // 2. 各月薪资趋势
+        $.getJSON("{% url 'stats_salary_trend' %}", function (res) {
+            if (!res.status) { return; }
+            var d = res.data;
+            salaryChart.setOption({
+                tooltip: {trigger: 'axis'},
+                legend: {data: ['薪资总额', '人均实发']},
+                grid: {left: 60, right: 30, bottom: 40, top: 40},
+                xAxis: {type: 'category', data: d.months, name: '月份'},
+                yAxis: [
+                    {type: 'value', name: '总额（元）'},
+                    {type: 'value', name: '人均（元）'}
+                ],
+                series: [
+                    {
+                        name: '薪资总额',
+                        type: 'bar',
+                        data: d.totals,
+                        itemStyle: {color: '#1f5edb'},
+                        barMaxWidth: 36
+                    },
+                    {
+                        name: '人均实发',
+                        type: 'line',
+                        yAxisIndex: 1,
+                        data: d.avgs,
+                        smooth: true,
+                        itemStyle: {color: '#f0a020'}
+                    }
+                ]
+            });
+        });
+
+        // 3. 近 7 天考勤堆叠图
+        $.getJSON("{% url 'stats_attendance_chart' %}", function (res) {
+            if (!res.status) { return; }
+            var d = res.data;
+            attendanceChart.setOption({
+                tooltip: {trigger: 'axis', axisPointer: {type: 'shadow'}},
+                legend: {bottom: 0},
+                grid: {left: 40, right: 20, bottom: 50, top: 20},
+                xAxis: {type: 'category', data: d.days},
+                yAxis: {type: 'value', name: '人数'},
+                color: ['#0fa97b', '#f0a020', '#1f5edb', '#e5484d', '#7d5bef'],
+                series: d.series.map(function (s) {
+                    return {name: s.name, type: 'bar', stack: 'total', data: s.data, barMaxWidth: 28};
+                })
+            });
+        });
+
+        window.addEventListener('resize', function () {
+            departChart.resize();
+            attendanceChart.resize();
+            salaryChart.resize();
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'layout.html' %}
+{% load rbac_tags %}
+{% block title %}我的考勤{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>我的考勤</h3><div class="sub">{{ month }} · 共 {{ queryset|length }} 条记录</div></div>
+    <div>
+        <form class="form-inline" method="get">
+            <input type="month" name="month" value="{{ month }}" class="form-control">
+            <button type="submit" class="btn btn-default">查询</button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-2 col-sm-4"><div class="stat-card"><div><div class="value">{{ summary.on_time }}</div><div class="label">按时</div></div></div></div>
+    <div class="col-md-2 col-sm-4"><div class="stat-card"><div><div class="value" style="color:#f0a020;">{{ summary.late }}</div><div class="label">迟到</div></div></div></div>
+    <div class="col-md-2 col-sm-4"><div class="stat-card"><div><div class="value" style="color:#0fa97b;">{{ summary.early }}</div><div class="label">早退</div></div></div></div>
+    <div class="col-md-2 col-sm-4"><div class="stat-card"><div><div class="value" style="color:#e5484d;">{{ summary.absent }}</div><div class="label">缺勤</div></div></div></div>
+    <div class="col-md-2 col-sm-4"><div class="stat-card"><div><div class="value" style="color:#e5484d;">{{ summary.late_early }}</div><div class="label">迟到并早退</div></div></div></div>
+</div>
+
+<div class="card">
+    <table class="table table-bordered table-hover">
+        <thead><tr><th>日期</th><th>上班</th><th>下班</th><th>状态</th><th>备注</th></tr></thead>
+        <tbody>
+        {% for obj in queryset %}
+            <tr>
+                <td>{{ obj.date|date:"Y-m-d" }}</td>
+                <td>{{ obj.check_in|time:"H:i"|default:"—" }}</td>
+                <td>{{ obj.check_out|time:"H:i"|default:"—" }}</td>
+                <td><span class="label label-{{ obj.status|status_class }}">{{ obj.get_status_display }}</span></td>
+                <td>{{ obj.remark|default:"—" }}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="text-center text-muted" style="padding:30px;">该月份暂无考勤记录</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

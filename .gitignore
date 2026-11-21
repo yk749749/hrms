@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Django
+db.sqlite3
+/media/
+/staticfiles/
+
+# 日志
+/logs/
+
+# IDE
+.idea/
+.vscode/
+
+# 系统
+Thumbs.db
+.DS_Store
+
+# 环境变量
+.env
+
+# 本机 AI Key（含真实 Key，不入库；模板见 scripts/ai_env.example.ps1）
+scripts/ai_env.ps1
+
+# 数据库备份 / 任何 SQL dump：含真实业务数据与密码哈希，严禁入库
+/backup/
+*.sql

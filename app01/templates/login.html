@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>登录 - 企业员工管理系统</title>
+    <link rel="stylesheet" href="{% static 'plugins/bootstrap-3.4.1/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/site.css' %}">
+    <style>
+        body { background: linear-gradient(135deg, #1f2a44 0%, #2c3e66 55%, #1b2436 100%); }
+        .login-wrap { width: 420px; margin: 8vh auto; }
+        .login-card { background: #fff; border-radius: 6px; padding: 28px 32px; box-shadow: 0 16px 40px rgba(0,0,0,.28); }
+        .login-title { text-align: center; margin-bottom: 6px; font-weight: 600; color: #22314f; }
+        .login-sub { text-align: center; color: #8a94a6; margin-bottom: 22px; font-size: 13px; }
+        .code-row { display: flex; align-items: center; gap: 10px; }
+        .code-row .form-control { flex: 1; }
+        .code-img { width: 118px; height: 36px; cursor: pointer; border: 1px solid #dcdcdc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+<div class="login-wrap">
+    <div class="login-card">
+        <h3 class="login-title"><span class="glyphicon glyphicon-briefcase"></span> 企业员工管理系统</span></h3>
+        <p class="login-sub">HRMS · 人事 / 考勤 / 薪资一体化管理</p>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+
+            <div class="form-group {{ form.username.errors|yesno:'has-error,' }}">
+                <label for="id_username">用户名</label>
+                <input type="text" class="form-control" id="id_username" name="username"
+                       placeholder="请输入用户名" value="{{ form.username.value|default:'' }}" autofocus>
+                <span class="help-block">{{ form.username.errors.0 }}</span>
+            </div>
+
+            <div class="form-group {{ form.password.errors|yesno:'has-error,' }}">
+                <label for="id_password">密码</label>
+                <input type="password" class="form-control" id="id_password" name="password"
+                       placeholder="请输入密码" autocomplete="off">
+                <span class="help-block">{{ form.password.errors.0 }}</span>
+            </div>
+
+            <div class="form-group {{ form.code.errors|yesno:'has-error,' }}">
+                <label for="id_code">图片验证码</label>
+                <div class="code-row">
+                    <input type="text" class="form-control" id="id_code" name="code"
+                           placeholder="不区分大小写" maxlength="8" autocomplete="off">
+                    <img src="{% url 'image_code' %}" id="image-code" class="code-img"
+                         title="看不清？点击刷新"
+                         onclick="this.src='{% url 'image_code' %}?t=' + Date.now();">
+                </div>
+                <span class="help-block">{{ form.code.errors.0 }}</span>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2">{{ form.non_field_errors.0 }}</div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">登 录</button>
+        </form>
+
+        <p class="text-muted" style="margin-top:18px;font-size:12px;">
+            初始账号：<code>admin / admin123456</code>（超级管理员）
+        </p>
+    </div>
+</div>
+</body>
+</html>

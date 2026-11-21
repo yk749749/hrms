@@ -1,0 +1,196 @@
+{% extends 'layout.html' %}
+{% load rbac_tags %}
+{% block title %}任务管理{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>任务管理</h3><div class="sub">AJAX 异步提交，校验错误实时回显，页面不刷新</div></div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <h4 style="margin-top:0;">新建任务</h4>
+            {% if 'task:add' in perms_codes %}
+                <form id="taskForm" novalidate>
+                    {% csrf_token %}
+                    <div class="form-group" data-field="level">
+                        <label>级别</label>
+                        {{ form.level }}
+                        <span class="help-block text-danger field-error"></span>
+                    </div>
+                    <div class="form-group" data-field="title">
+                        <label>标题</label>
+                        {{ form.title }}
+                        <span class="help-block text-danger field-error"></span>
+                    </div>
+                    <div class="form-group" data-field="detail">
+                        <label>详细信息</label>
+                        {{ form.detail }}
+                        <span class="help-block text-danger field-error"></span>
+                    </div>
+                    <div class="form-group" data-field="leader">
+                        <label>负责人</label>
+                        {{ form.leader }}
+                        <span class="help-block text-danger field-error"></span>
+                    </div>
+                    <div id="formAlert" class="alert alert-danger" style="display:none;"></div>
+                    <div id="formOk" class="alert alert-success" style="display:none;"></div>
+                    <button type="submit" class="btn btn-primary" id="btnSubmit">提 交</button>
+                </form>
+            {% else %}
+                <p class="text-muted">当前账号没有新建任务的权限。</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="search-bar">
+                <form class="form-inline" method="get">
+                    <div class="form-group">
+                        <input type="text" name="q" value="{{ keyword }}" class="form-control"
+                               placeholder="任务标题" style="width:180px;">
+                    </div>
+                    <div class="form-group">
+                        <select name="level" class="form-control" style="width:130px;">
+                            <option value="">全部级别</option>
+                            {% for value, label in level_choices %}
+                                <option value="{{ value }}" {% if level == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search"></span> 查询</button>
+                    <a href="{% url 'task_list' %}" class="btn btn-link">重置</a>
+                </form>
+            </div>
+
+            <table class="table table-bordered table-hover" id="taskTable">
+                <thead>
+                <tr>
+                    <th style="width:60px;">ID</th>
+                    <th style="width:80px;">级别</th>
+                    <th>标题 / 详情</th>
+                    <th style="width:100px;">负责人</th>
+                    <th style="width:90px;">状态</th>
+                    <th style="width:140px;">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for obj in queryset %}
+                    <tr id="task-row-{{ obj.id }}">
+                        <td>{{ obj.id }}</td>
+                        <td><span class="label label-{{ obj.level|level_class }}">{{ obj.get_level_display }}</span></td>
+                        <td>
+                            <strong>{{ obj.title }}</strong>
+                            <div class="text-muted small">{{ obj.detail }}</div>
+                        </td>
+                        <td>{{ obj.leader.name }}</td>
+                        <td class="task-status">{{ obj.completed|yesno:"已完成,进行中" }}</td>
+                        <td>
+                            {% if 'task:add' in perms_codes %}
+                                <button type="button" class="btn btn-default btn-xs btn-toggle"
+                                        data-id="{{ obj.id }}"
+                                        data-completed="{{ obj.completed|yesno:'1,0' }}">
+                                    {{ obj.completed|yesno:"标记未完成,标记完成" }}
+                                </button>
+                                <form method="post" action="{% url 'task_delete' %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="nid" value="{{ obj.id }}">
+                                    <button type="submit" class="btn btn-danger btn-xs" data-confirm="确定删除任务「{{ obj.title }}」吗？">删除</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr id="emptyRow"><td colspan="6" class="text-center text-muted" style="padding:30px;">暂无任务</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+            <nav style="text-align:center;"><ul class="pagination">{{ page_string }}</ul></nav>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+    (function () {
+        var form = document.getElementById('taskForm');
+        if (!form) { return; }
+
+        var alertBox = document.getElementById('formAlert');
+        var okBox = document.getElementById('formOk');
+        var btn = document.getElementById('btnSubmit');
+
+        function clearErrors() {
+            document.querySelectorAll('.field-error').forEach(function (el) { el.textContent = ''; });
+            document.querySelectorAll('.form-group').forEach(function (el) { el.classList.remove('has-error'); });
+            alertBox.style.display = 'none';
+            okBox.style.display = 'none';
+        }
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            clearErrors();
+            btn.disabled = true;
+
+            $.ajax({
+                url: "{% url 'task_add_ajax' %}",
+                type: 'post',
+                data: $(form).serialize(),
+                dataType: 'json'
+            }).done(function (res) {
+                if (res && res.status) {
+                    okBox.textContent = '任务「' + res.data.title + '」创建成功';
+                    okBox.style.display = 'block';
+                    form.reset();
+                    // 5 秒后自动刷新，保证列表与分页信息一致
+                    setTimeout(function () { window.location.reload(); }, 800);
+                }
+            }).fail(function (xhr) {
+                var res = xhr.responseJSON || {};
+                if (res.error) {
+                    Object.keys(res.error).forEach(function (name) {
+                        var box = document.querySelector('[data-field="' + name + '"]');
+                        if (box) {
+                            box.classList.add('has-error');
+                            var span = box.querySelector('.field-error');
+                            if (span) { span.textContent = res.error[name][0]; }
+                        }
+                    });
+                    if (res.error.__all__) {
+                        alertBox.textContent = res.error.__all__[0];
+                        alertBox.style.display = 'block';
+                    }
+                } else {
+                    alertBox.textContent = res.error || '提交失败，请稍后重试';
+                    alertBox.style.display = 'block';
+                }
+            }).always(function () {
+                btn.disabled = false;
+            });
+        });
+
+        // 切换完成状态
+        $(document).on('click', '.btn-toggle', function () {
+            var btnEl = $(this);
+            var id = btnEl.data('id');
+            $.ajax({
+                url: "{% url 'task_toggle_ajax' %}",
+                type: 'post',
+                data: {nid: id},
+                dataType: 'json'
+            }).done(function (res) {
+                if (res && res.status) {
+                    var completed = res.data.completed;
+                    $('#task-row-' + id + ' .task-status').text(completed ? '已完成' : '进行中');
+                    btnEl.text(completed ? '标记未完成' : '标记完成');
+                    btnEl.data('completed', completed ? 1 : 0);
+                }
+            });
+        });
+    })();
+</script>
+{% endblock %}

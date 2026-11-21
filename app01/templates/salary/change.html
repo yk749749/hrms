@@ -1,0 +1,63 @@
+{% extends 'layout.html' %}
+{% load rbac_tags %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>{{ title }}</h3><div class="sub">实发工资由「基本工资 + 奖金 - 扣款」自动计算，无需手工填写</div></div>
+    <div><a href="{% url 'salary_list' %}" class="btn btn-default">返回列表</a></div>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card">
+            <form method="post" novalidate id="salaryForm">
+                {% csrf_token %}
+                {% include 'includes/form.html' %}
+
+                <div class="alert alert-info">
+                    预计实发工资：<strong id="totalPreview">￥0.00</strong>
+                    <span class="text-muted small">（保存后以后端计算结果为准）</span>
+                </div>
+
+                <button type="submit" class="btn btn-primary">保 存</button>
+                <a href="{% url 'salary_list' %}" class="btn btn-default">取 消</a>
+            </form>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card">
+            <h4 style="margin-top:0;">计算说明</h4>
+            <p>实发工资 <code>= 基本工资 + 奖金 - 扣款</code></p>
+            <p class="text-muted small">
+                视图层使用 <code>commit=False</code> 先计算再保存，模型 <code>save()</code> 中也会兜底重算，
+                保证页面显示与数据库存储一致。
+            </p>
+            {% if row_object %}
+                <hr>
+                <p>当前记录实发：<strong>￥{{ row_object.total|money }}</strong></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+    (function () {
+        var base = document.getElementById('id_base_salary');
+        var bonus = document.getElementById('id_bonus');
+        var deduction = document.getElementById('id_deduction');
+        var preview = document.getElementById('totalPreview');
+
+        function calc() {
+            var v = (parseFloat(base.value) || 0) + (parseFloat(bonus.value) || 0) - (parseFloat(deduction.value) || 0);
+            preview.textContent = '￥' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+        [base, bonus, deduction].forEach(function (el) {
+            if (el) { el.addEventListener('input', calc); }
+        });
+        calc();
+    })();
+</script>
+{% endblock %}

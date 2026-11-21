@@ -1,0 +1,32 @@
+{% extends 'layout.html' %}
+{% block title %}权限清单{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h3>权限清单</h3><div class="sub">权限由 <code>init_data</code> 命令统一维护，编码格式为「模块:动作」</div></div>
+    <div><a href="{% url 'role_list' %}" class="btn btn-default">返回角色</a></div>
+</div>
+
+<div class="card">
+    <table class="table table-bordered table-hover">
+        <thead>
+        <tr>
+            <th style="width:150px;">模块</th>
+            <th style="width:170px;">权限编码</th>
+            <th style="width:150px;">权限名称</th>
+            <th>说明</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for obj in queryset %}
+            <tr>
+                <td>{{ obj.module }}</td>
+                <td><code>{{ obj.code }}</code></td>
+                <td>{{ obj.name }}</td>
+                <td>{{ obj.description }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

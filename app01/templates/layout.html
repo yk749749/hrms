@@ -1,0 +1,127 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}企业员工管理系统{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'plugins/bootstrap-3.4.1/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/site.css' %}">
+    {% block css %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="/">
+                <span class="glyphicon glyphicon-briefcase"></span>
+                企业员工管理系统
+            </a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+            <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                    {{ current_user.real_name|default:current_user.username }}
+                    <small class="text-muted">({{ current_user.role_names }})</small>
+                    <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    {% if 'self:view' in perms_codes %}
+                        <li><a href="{% url 'my_profile' %}">我的档案</a></li>
+                    {% endif %}
+                    <li><a href="/admin/" target="_blank">Django 后台</a></li>
+                    <li role="separator" class="divider"></li>
+                    <li><a href="{% url 'logout' %}">注销登录</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<div class="layout">
+    <aside class="sidebar">
+        <ul class="nav nav-pills nav-stacked">
+            <li class="{% if request.path == '/' %}active{% endif %}">
+                <a href="/"><span class="glyphicon glyphicon-home"></span> 首页</a>
+            </li>
+            {% if 'depart:view' in perms_codes %}
+                <li class="{% if '/depart/' in request.path %}active{% endif %}">
+                    <a href="{% url 'depart_list' %}"><span class="glyphicon glyphicon-list-alt"></span> 部门管理</a>
+                </li>
+            {% endif %}
+            {% if 'employee:view' in perms_codes %}
+                <li class="{% if '/employee/' in request.path %}active{% endif %}">
+                    <a href="{% url 'employee_list' %}"><span class="glyphicon glyphicon-user"></span> 员工管理</a>
+                </li>
+            {% endif %}
+            {% if 'attendance:view' in perms_codes %}
+                <li class="{% if '/attendance/' in request.path %}active{% endif %}">
+                    <a href="{% url 'attendance_list' %}"><span class="glyphicon glyphicon-time"></span> 考勤管理</a>
+                </li>
+            {% endif %}
+            {% if 'salary:view' in perms_codes %}
+                <li class="{% if '/salary/' in request.path %}active{% endif %}">
+                    <a href="{% url 'salary_list' %}"><span class="glyphicon glyphicon-yen"></span> 薪资管理</a>
+                </li>
+            {% endif %}
+            {% if 'announcement:view' in perms_codes %}
+                <li class="{% if '/announcement/' in request.path %}active{% endif %}">
+                    <a href="{% url 'announcement_list' %}"><span class="glyphicon glyphicon-bullhorn"></span> 公告管理</a>
+                </li>
+            {% endif %}
+            {% if 'task:view' in perms_codes %}
+                <li class="{% if '/task/' in request.path %}active{% endif %}">
+                    <a href="{% url 'task_list' %}"><span class="glyphicon glyphicon-tasks"></span> 任务管理</a>
+                </li>
+            {% endif %}
+            {% if 'ai:view' in perms_codes %}
+                <li class="{% if '/ai/' in request.path %}active{% endif %}">
+                    <a href="{% url 'ai_page' %}"><span class="glyphicon glyphicon-console"></span> AI 智能助手</a>
+                </li>
+            {% endif %}
+            {% if 'stats:view' in perms_codes %}
+                <li class="{% if '/stats/' in request.path %}active{% endif %}">
+                    <a href="{% url 'stats_page' %}"><span class="glyphicon glyphicon-stats"></span> 数据统计</a>
+                </li>
+            {% endif %}
+            {% if 'system:view' in perms_codes %}
+                <li class="{% if '/system/' in request.path %}active{% endif %}">
+                    <a href="{% url 'user_list' %}"><span class="glyphicon glyphicon-cog"></span> 系统管理</a>
+                </li>
+            {% endif %}
+            {% if 'self:view' in perms_codes %}
+                <li class="menu-group">我的</li>
+                <li class="{% if '/my/profile/' in request.path %}active{% endif %}">
+                    <a href="{% url 'my_profile' %}"><span class="glyphicon glyphicon-id-card"></span> 我的档案</a>
+                </li>
+                <li class="{% if '/my/attendance/' in request.path %}active{% endif %}">
+                    <a href="{% url 'my_attendance' %}"><span class="glyphicon glyphicon-calendar"></span> 我的考勤</a>
+                </li>
+                <li class="{% if '/my/salary/' in request.path %}active{% endif %}">
+                    <a href="{% url 'my_salary' %}"><span class="glyphicon glyphicon-credit-card"></span> 我的薪资</a>
+                </li>
+            {% endif %}
+        </ul>
+    </aside>
+
+    <main class="main">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<script src="{% static 'js/jquery-3.6.0.min.js' %}"></script>
+<script src="{% static 'plugins/bootstrap-3.4.1/js/bootstrap.min.js' %}"></script>
+<script src="{% static 'js/site.js' %}"></script>
+{% block js %}{% endblock %}
+</body>
+</html>
